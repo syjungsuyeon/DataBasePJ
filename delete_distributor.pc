@@ -1,0 +1,121 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+//oracle
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+//win32 Visual C 2010 이상 컴파일 시 추가
+#define getch() _getch()
+
+//화면 커서 위치 제어
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+
+void print_screen(char fname[]);
+void DB_connect();
+void dd_Select_tuple(char *no);
+void dd_Delete_tuple();
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+char dn[100], n[100], tl[100];
+
+//튜플 삭제
+void dd_Delete_tuple()
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+
+    char dynstmt[1000];
+    char  distributor_num[100];
+    char no_temp1[10];
+    char flag[2];
+
+   EXEC SQL END DECLARE SECTION;
+
+   EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+   clrscr();
+   system("cls");
+   print_screen("src_DistributorDelete.txt");
+  
+    gotoxy(33, 6);
+    gets(no_temp1, 10, stdin);
+    no_temp1[strlen(no_temp1)] = '\0';
+
+    dd_Select_tuple(no_temp1);
+
+   printf("위의 튜플들을 삭제하시겠습니까? (y/n) : ");
+
+   gets(flag);
+
+   if( flag[0] == 'y' || flag[0] =='Y' ){
+       sprintf(dynstmt,"delete from transaction where distributor_num = '%s'", no_temp1);
+       EXEC SQL EXECUTE IMMEDIATE :dynstmt ;
+       EXEC SQL COMMIT WORK;
+
+       sprintf(dynstmt,"delete from distributor where distributor_num = '%s'", no_temp1);
+       EXEC SQL EXECUTE IMMEDIATE :dynstmt ;
+       EXEC SQL COMMIT WORK;
+
+       printf("삭제 완료");
+       getch();
+       select_main();
+   }
+   else {
+       printf("삭제를 취소합니다.\n");
+   }
+
+}
+
+//튜플 검색
+void dd_Select_tuple(char *no)
+{
+
+   EXEC SQL BEGIN DECLARE SECTION;
+    varchar  v_dn[100];
+    varchar v_n[100];
+    varchar v_tl[100];
+
+    char dynstmt[1000];
+    EXEC SQL END DECLARE SECTION;
+    
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+   
+    sprintf(dynstmt,"select distributor_num, name, trans_loc from distributor where distributor_num = '%s'", no) ;
+    
+    EXEC SQL PREPARE S FROM :dynstmt;
+
+    EXEC SQL DECLARE c_cursor CURSOR FOR S;
+
+    EXEC SQL OPEN c_cursor;
+
+    EXEC SQL WHENEVER NOT FOUND do break;
+    for(;;)
+    {
+        EXEC SQL FETCH c_cursor INTO :v_dn, :v_n, :v_tl;
+
+	    v_dn.arr[v_dn.len] = '\0';
+	    v_n.arr[v_n.len] = '\0';
+	    v_tl.arr[v_tl.len] = '\0';
+	    
+	    printf("\n\n\n유통업자번호 : %s\n이름 : %s\n지역 : %s\n", v_dn.arr, v_n.arr, v_tl.arr);
+    }
+
+    EXEC SQL CLOSE c_cursor; 
+}
+
+/*---------------------------------------------------------------------------------------------*/

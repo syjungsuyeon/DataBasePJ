@@ -1,0 +1,123 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+//oracle
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+//win32 Visual C 2010 이상 컴파일 시 추가
+#define getch() _getch()
+
+//화면 커서 위치 제어
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+
+void print_screen(char fname[]);
+void DB_connect();
+void dc_Select_tuple(char *no);
+void dc_Delete_tuple();
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+char bn[100], sn[100], ds[100], loc[100] ;
+
+//튜플 삭제
+void dc_Delete_tuple()
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+
+    char dynstmt[1000];
+    char  business_num[100];
+    char no_temp1[100];
+    char flag[2];
+
+   EXEC SQL END DECLARE SECTION;
+
+   EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+   clrscr();
+   system("cls");
+   print_screen("src_ClientDelete.txt");
+
+    gotoxy(32, 6);
+    gets(no_temp1, 10, stdin);
+    no_temp1[strlen(no_temp1)] = '\0';
+
+    dc_Select_tuple(no_temp1);
+
+   printf("위의 튜플들을 삭제하시겠습니까? (y/n) : ");
+
+   gets(flag);
+
+   if( flag[0] == 'y' || flag[0] =='Y' ){
+       sprintf(dynstmt,"delete from transaction where business_num = '%s'", no_temp1);
+       EXEC SQL EXECUTE IMMEDIATE :dynstmt ;
+       EXEC SQL COMMIT WORK;
+
+       sprintf(dynstmt,"delete from client where business_num = '%s'", no_temp1);
+       EXEC SQL EXECUTE IMMEDIATE :dynstmt ;
+       EXEC SQL COMMIT WORK;
+
+       printf("삭제 완료");
+       getch();
+       select_main();
+   }
+   else {
+       printf("삭제를 취소합니다.\n");
+   }
+
+}
+
+//튜플 검색
+void dc_Select_tuple(char *no)
+{
+
+   EXEC SQL BEGIN DECLARE SECTION;
+    varchar  v_bn[100];
+    varchar  v_sn[100];
+    varchar  v_ds[100];
+    varchar  v_loc[100];
+
+    char dynstmt[1000];
+    EXEC SQL END DECLARE SECTION;
+    
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+   
+    sprintf(dynstmt,"select business_num, store_name, delevery_store, location from client where business_num = '%s'", no) ;
+    
+    EXEC SQL PREPARE S FROM :dynstmt;
+
+    EXEC SQL DECLARE c_cursor CURSOR FOR S;
+
+    EXEC SQL OPEN c_cursor;
+
+    EXEC SQL WHENEVER NOT FOUND do break;
+    for(;;)
+    {
+        EXEC SQL FETCH c_cursor INTO :v_bn, :v_sn, :v_ds, :v_loc ;
+
+	    v_bn.arr[v_bn.len] = '\0';
+	    v_sn.arr[v_sn.len] = '\0';
+	    v_ds.arr[v_ds.len] = '\0';
+	    v_loc.arr[v_loc.len] = '\0';
+	    
+	    printf("\n\n\n부서번호:%s\n가게명 : %s\n산매 / 소매 : %s\n위치 : %s \n", v_bn.arr, v_sn.arr, v_ds.arr, v_loc.arr);
+    }
+
+    EXEC SQL CLOSE c_cursor; 
+}
+
+/*---------------------------------------------------------------------------------------------*/

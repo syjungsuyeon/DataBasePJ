@@ -1,0 +1,195 @@
+// 마지막고침 : 2020.11.17
+// win32 Visual C 2010 이상컴파일시 추가
+// 프로그램 가장 첫 줄에 추가할 것
+#define _CRT_SECURE_NO_WARNINGS
+//-----------------------------------------
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+/* for oracle */
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+
+// win32 Visual C 2010 이상컴파일시 추가
+#define getch() _getch()
+//-----------------------------------------
+
+/*---------------  화면 커서 위치 제어 ----------------------*/
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+/*-----------------------------------------------------------*/
+void print_screen(char fname[]);
+void DB_connect();
+void select_main();	// 메인 화면 선택
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+#define getch() _getch()
+
+void main()
+{
+	_putenv("NLS_LANG=American_America.KO16KSC5601"); //한글사용
+
+	DB_connect();
+	select_main();
+	EXEC SQL COMMIT WORK RELEASE ;
+	getch();
+}
+
+void DB_connect()
+{
+   strcpy((char *)uid.arr,"B20203146@//sedb.deu.ac.kr:1521/orcl");
+   uid.len = (short) strlen((char *)uid.arr);
+   strcpy((char *)pwd.arr,"20203146");
+   pwd.len = (short) strlen((char *)pwd.arr);
+
+   EXEC SQL CONNECT :uid IDENTIFIED BY :pwd;
+
+	// connection이 실패했을경우의 처리부분
+
+	if (sqlca.sqlcode != 0 && sqlca.sqlcode != -1405){ 
+		printf("Connect error: %s", sqlca.sqlerrm.sqlerrmc);
+		getch();
+		exit(-1);
+	}
+}
+
+#define PAGE_NUM 5
+
+
+void select_main()
+{
+/* --------------------------------------------------------------------------
+   Retrieve the current maximum employee number
+-------------------------------------------------------------------------- */
+
+// 전역 변수 및 함수 선언
+extern void search_store();	// 1번 이동
+extern void search_product(); // 2번 이동
+extern void select_transaction(); // 3번 이동
+extern void select_clinet(); // 4번 이동
+extern void select_distributor(); // 5번 이동
+
+   /* Register sql_error() as the error handler. */
+   EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+   /* 사용자 입력 */
+   clrscr();
+   system("cls");
+   char move_page = 0; // 추가
+   int moving = 9;	 // 추가
+   gotoxy(0, 1);	// 추가
+
+   print_screen("main.txt");
+
+	while (TRUE) {
+		CONSOLE_SCREEN_BUFFER_INFO presentCur;
+		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &presentCur);
+		gotoxy(30, moving);	// y좌표
+		move_page = _getch();
+		if (move_page == 32) { // 아스키코드 - SP 스페이스바
+
+			if (moving == 21)  // 최대 커서 이동 가능한 줄
+				moving = 9;	// 커서 10줄부터 시작
+			else
+				moving += 3;	// 커서 움직일때마다 3줄씩 이동
+		}
+		if (move_page == 13) {   // 아스키코드 - CR 줄바꿈
+			clrscr();
+			if (moving == 9)	// 텍스트 파일 9줄일때
+				search_store(); // 가게 검색 페이지 이동
+			 if (moving == 12)
+				search_product(); // 상품 검색 페이지 이동
+			if (moving == 15)
+				select_transaction(); // 유통 상품 내역 관리 페이지 이동
+			if (moving == 18)
+				select_clinet(); // 거래처 정보 관리 페이지 이동
+			if (moving == 21)
+				select_distributor();  // 유통업자 정보 관리 페이지 이동
+		}
+	}
+}
+
+void print_screen(char fname[])
+{
+	FILE *fp;
+	char line[100];
+
+	if ( (fp = fopen(fname,"r"))  == NULL ){
+		printf("file open error\n");
+		getch();
+		exit(-1);
+	}
+	while(1)
+	{
+		if( fgets(line, 99, fp) == NULL){
+		     break;
+		}
+		printf("%s", line);
+	}
+
+	fclose(fp);
+}
+/* --------------------------------------------------------------------------
+int sql_error()
+
+   errrpt prints the ORACLE error msg and number.
+-------------------------------------------------------------------------- */
+void sql_error(char *msg)
+{
+    char err_msg[128];
+    size_t buf_len, msg_len;
+
+    EXEC SQL WHENEVER SQLERROR CONTINUE;
+
+    printf("\n%s\n", msg);
+    buf_len = sizeof (err_msg);
+    sqlglm(err_msg, &buf_len, &msg_len);
+    printf("%.*s\n", msg_len, err_msg);
+
+    getch();
+    EXEC SQL ROLLBACK WORK;
+    //exit(EXIT_FAILURE);
+}
+/*---------------  화면 커서 제어 함수 --------------------*/
+#define STD_HANDLE GetStdHandle(STD_OUTPUT_HANDLE)
+
+void gotoxy(int x, int y)
+{
+    COORD Cur= {(SHORT)x, (SHORT) y};
+
+    SetConsoleCursorPosition(STD_HANDLE, Cur);
+}
+
+void getxy(int *x, int *y)
+{
+    CONSOLE_SCREEN_BUFFER_INFO Buf ;
+
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &Buf);
+    *x = (int)Buf.dwCursorPosition.X ;
+    *y = (int)Buf.dwCursorPosition.Y ;
+ 
+}
+
+void clrscr(void)
+{
+    COORD Cur= {0, 0};
+    unsigned long dwLen;
+
+    FillConsoleOutputCharacter(STD_HANDLE, ' ', 80*25, Cur, &dwLen);
+}
+
+/*---------------------------------------------------------*/

@@ -1,0 +1,76 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+//oracle
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+//win32 Visual C 2010 이상 컴파일 시 추가
+#define getch() _getch()
+
+//화면 커서 위치 제어
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+
+void print_screen(char fname[]);
+void DB_connect();
+void id_Insert_tuple();
+void rtrim();	
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+void id_Insert_tuple()
+{
+
+    EXEC SQL BEGIN DECLARE SECTION;
+    char dynstmt[1000];
+    EXEC SQL END DECLARE SECTION;
+
+    char distributor_num[30];
+    char name[10];
+    char trans_loc[30];
+
+   /* Register sql_error() as the error handler. */
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+   clrscr();
+   system("cls");
+   print_screen("src_DistributorInsert.txt");
+
+   /* 사업자번호 입력 */
+    gotoxy(29,6)  ; 
+    gets(distributor_num);
+    
+   /* 가게명 입력 */
+    gotoxy(20,8)  ;
+    gets(name);
+
+   /* 산매 / 소매 입력 */
+    gotoxy(20,10);
+    gets(trans_loc);
+
+    sprintf(dynstmt, "insert into distributor values(%s, '%s', '%s')", distributor_num, name, trans_loc);
+   
+
+    EXEC SQL EXECUTE IMMEDIATE :dynstmt ;
+
+    EXEC SQL COMMIT WORK ;
+
+   getch();
+   select_main();
+}
+
+/*----------------------------------------------------------------------------------------*/

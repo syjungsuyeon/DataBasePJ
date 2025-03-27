@@ -1,0 +1,124 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+//oracle
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+//win32 Visual C 2010 이상 컴파일 시 추가
+#define getch() _getch()
+
+//화면 커서 위치 제어
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+
+void print_screen(char fname[]);
+void DB_connect();
+void ud_select_tuple();
+void ud_Update_tuple();
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+char dn[100], n[100], loc[100];
+
+void ud_Update_tuple()
+{
+EXEC SQL BEGIN DECLARE SECTION;
+    char dynstmt[1000];
+EXEC SQL END DECLARE SECTION;
+
+    char no_temp2[100];
+    char no_temp3[100];
+
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+   /* 사용자 입력 */
+   clrscr();
+   system("cls");
+   print_screen("src_DistributorUpdate.txt");
+
+    ud_select_tuple();
+   
+    gotoxy(20, 7);
+    gets(no_temp2);
+   if(no_temp2[0] == '\0' ) {
+       printf("%s\n", n);
+       strcpy(no_temp2, n);
+   }
+
+    gotoxy(20, 9);
+    gets(no_temp3);
+   if(no_temp3[0] == '\0' ) {
+       printf("%s\n",loc);
+       strcpy(no_temp3,loc);
+   }
+
+    sprintf(dynstmt,"update distributor set name = '%s', trans_loc = '%s' where distributor_num = '%s'", no_temp2, no_temp3, dn) ;
+
+   EXEC SQL EXECUTE IMMEDIATE :dynstmt ;
+
+   EXEC SQL COMMIT WORK ;
+
+   getch();
+   select_main();
+}
+
+void ud_select_tuple()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    varchar v_dn[100];
+    varchar v_n[100];
+    varchar v_loc[100];
+
+    char dynstmt[1000];
+    EXEC SQL END DECLARE SECTION;
+    char no_temp1[100];
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+    gotoxy(29, 5);   
+    gets(no_temp1);
+    //no_temp1[strlen(no_temp1)] = '\0';	// 사업자 번호
+
+    sprintf(dynstmt,"SELECT distributor_num, name, trans_loc FROM distributor where distributor_num = '%s'", no_temp1) ;
+    EXEC SQL PREPARE S FROM :dynstmt ;
+
+    EXEC SQL DECLARE c_cursor CURSOR FOR S ; 
+
+    EXEC SQL OPEN c_cursor ; 
+
+    EXEC SQL WHENEVER NOT FOUND do break;
+    for(;;)
+    {
+        EXEC SQL FETCH c_cursor INTO :v_dn, :v_n, :v_loc ;
+
+	    v_dn.arr[v_dn.len] = '\0';
+	    v_n.arr[v_n.len] = '\0';
+	    v_loc.arr[v_loc.len] = '\0';
+    }
+	
+    strcpy(dn, v_dn.arr);
+    strcpy(n, v_n.arr);
+    strcpy(loc, v_loc.arr);
+
+    EXEC SQL CLOSE c_cursor; 
+
+}
+
+/* --------------------------------------------------------------------------
+void sql_error()
+
+   errrpt prints the ORACLE error msg and number.
+-------------------------------------------------------------------------- */

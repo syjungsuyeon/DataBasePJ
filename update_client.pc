@@ -1,0 +1,131 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+//oracle
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+//win32 Visual C 2010 이상 컴파일 시 추가
+#define getch() _getch()
+
+//화면 커서 위치 제어
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+
+void print_screen(char fname[]);
+void DB_connect();
+void uc_select_tuple();
+void uc_Update_tuple();
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+char bn[100], sn[100], ds[100], loc[100] ;
+
+void uc_Update_tuple()
+{
+EXEC SQL BEGIN DECLARE SECTION;
+
+    char dynstmt[1000];
+
+EXEC SQL END DECLARE SECTION;
+    char no_temp2[100];
+    char no_temp3[100];
+    char no_temp4[100];
+
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+   /* 사용자 입력 */
+   clrscr();
+   system("cls");
+   print_screen("src_ClientUpdate.txt");
+
+    uc_select_tuple();
+
+    gotoxy(25, 8);
+    gets(no_temp2);
+    //no_temp2[strlen(no_temp2)] = '\0';	// 가게 이름
+   if(no_temp2[0] == '\0' ) {
+       printf("%s\n", sn);
+       strcpy(no_temp2, sn);
+   }
+
+    gotoxy(20, 10);
+    gets(no_temp3);
+    //no_temp3[strlen(no_temp4)] = '\0';	// 위치
+   if(no_temp3[0] == '\0' ) {
+       printf("%s\n",loc);
+       strcpy(no_temp3,loc);
+   }
+
+    sprintf(dynstmt,"update client set store_name = '%s', location = '%s' where business_num = '%s'", no_temp2, no_temp3, bn) ;
+
+   EXEC SQL EXECUTE IMMEDIATE :dynstmt ;
+
+   EXEC SQL COMMIT WORK ;
+
+   getch();
+   select_main();
+}
+
+void uc_select_tuple()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    varchar v_bn[100];
+    varchar v_sn[100];
+    varchar v_ds[100];
+    varchar v_loc[100];
+
+    char dynstmt[1000];
+    EXEC SQL END DECLARE SECTION;
+    char no_temp1[100];
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+    gotoxy(27, 6);   
+    gets(no_temp1);
+    //no_temp1[strlen(no_temp1)] = '\0';	// 사업자 번호
+
+    sprintf(dynstmt,"SELECT business_num, store_name, delevery_store, location FROM client where business_num = '%s'", no_temp1) ;
+    EXEC SQL PREPARE S FROM :dynstmt ;
+
+    EXEC SQL DECLARE c_cursor CURSOR FOR S ; 
+
+    EXEC SQL OPEN c_cursor ; 
+
+    EXEC SQL WHENEVER NOT FOUND do break;
+    for(;;)
+    {
+        EXEC SQL FETCH c_cursor INTO :v_bn, :v_sn, :v_ds, :v_loc ;
+
+	    v_bn.arr[v_bn.len] = '\0';
+	    v_sn.arr[v_sn.len] = '\0';
+	    v_ds.arr[v_ds.len] = '\0';
+	    v_loc.arr[v_loc.len] = '\0';
+    }
+	
+    strcpy(bn, v_bn.arr);
+    strcpy(sn, v_sn.arr);
+    strcpy(ds, v_ds.arr);
+    strcpy(loc, v_loc.arr);
+
+    EXEC SQL CLOSE c_cursor; 
+
+}
+
+/* --------------------------------------------------------------------------
+void sql_error()
+
+   errrpt prints the ORACLE error msg and number.
+-------------------------------------------------------------------------- */

@@ -1,0 +1,149 @@
+// 마지막고침 : 2020.11.17
+// win32 Visual C 2010 이상컴파일시 추가
+// 프로그램 가장 첫 줄에 추가할 것
+#define _CRT_SECURE_NO_WARNINGS
+//-----------------------------------------
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+/* for oracle */
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+
+// win32 Visual C 2010 이상컴파일시 추가
+#define getch() _getch()
+//-----------------------------------------
+
+/*---------------  화면 커서 위치 제어 ----------------------*/
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+/*-----------------------------------------------------------*/
+void print_screen(char fname[]);
+void DB_connect();
+void search_product();
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+#define getch() _getch()
+
+#define PAGE_NUM 5
+
+void search_product()
+{
+/* --------------------------------------------------------------------------
+   Retrieve the current maximum employee number
+-------------------------------------------------------------------------- */
+EXEC SQL BEGIN DECLARE SECTION;
+   varchar store_name[100];
+   varchar product_name[100];
+   varchar product_count[100];
+   varchar t_price[100];
+
+   char dynstmt[1000];
+
+EXEC SQL END DECLARE SECTION;
+
+   char no_distributor[10];
+   char no_temp2[10];
+
+   int x, y, count=0, i ;
+
+
+   /* Register sql_error() as the error handler. */
+   EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+
+   /* 사용자 입력 */
+   clrscr();
+   system("cls");
+   print_screen("scr_SearchProduct.txt");
+
+   gotoxy(26,5);
+   //printf("유통:");
+   gets(no_distributor); 
+   
+   gotoxy(54,5);
+   //printf("찾을 사람의 이름을 입력하세요:");
+   gets(no_temp2);
+      
+   if(no_distributor[0]=='\0' || no_temp2[0]=='\0'){
+   /* 실행시킬 SQL 문장*/
+   sprintf(dynstmt, "SELECT c.store_name, t.product_name, t.product_count, to_char(t.price,'99,999')  FROM Transaction t join Client c ON c.business_num = t.business_num WHERE t.distributor_num='%s' or t.product_name='%s'", 
+no_distributor, no_temp2);
+   }else {
+   sprintf(dynstmt, "SELECT c.store_name, t.product_name, t.product_count, to_char(t.price,'99,999')  FROM Transaction t join Client c ON c.business_num = t.business_num WHERE t.distributor_num='%s' and t.product_name='%s'", 
+no_distributor, no_temp2);
+   }
+
+   /* select 문장이 제대로 구성되어 있는지 화면에 찍어봄 */
+   //printf("dynstmt:%s\n", dynstmt);
+
+   EXEC SQL PREPARE S FROM :dynstmt ;
+
+   /* cursor 선언 */
+   EXEC SQL DECLARE c_cursor CURSOR FOR S ; 
+
+   /* cursor open */
+   EXEC SQL OPEN c_cursor ; 
+
+   EXEC SQL WHENEVER NOT FOUND DO break;
+
+   x = 10;
+   y = 10 ;
+
+   for (;;)
+    {
+        EXEC SQL FETCH c_cursor INTO :store_name, :product_name, :product_count, :t_price ;
+
+	store_name.arr[store_name.len] = '\0' ;
+	product_name.arr[product_name.len] = '\0';
+	product_count.arr[product_count.len] = '\0';
+	t_price.arr[t_price.len] = '\0';
+	gotoxy(x,y);
+	printf(" |  %-10s|   %-10s|     %-8s|   %-10s|", store_name.arr, product_name.arr, product_count.arr, t_price.arr);
+	y++;
+	count++;
+
+	if( count == PAGE_NUM){
+	   printf("\n                                  hit any key\n");
+	   count = 0;
+	   getch();
+
+           gotoxy(0,10); //이전 화면 부분 클리어
+           for(i= 0; i < PAGE_NUM; i++){
+		printf("                                                          \n");
+	   }
+
+	   y = 10 ;
+	}
+
+    }
+    // printf("                              (END)\n");
+
+    /* Close the cursor. */
+   EXEC SQL CLOSE c_cursor;
+
+   EXEC SQL COMMIT ;
+
+   getch();
+   select_main();
+}
+
+/* --------------------------------------------------------------------------
+int sql_error()
+
+   errrpt prints the ORACLE error msg and number.
+-------------------------------------------------------------------------- */

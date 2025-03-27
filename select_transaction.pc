@@ -1,0 +1,133 @@
+/**
+작성일: 2022.12.07
+작성자: 윤채민
+*/
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+//oracle
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+//win32 Visual C 2010 이상 컴파일 시 추가
+#define getch() _getch()
+
+//화면 커서 위치 제어
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+
+void print_screen(char fname[]);
+void DB_connect();
+void ts_Select_tuple();
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+char tn[100], bn[100], pn[100], pc[100], pr[100], dn[100], sd[100], ed[100], tc[100], cn[100] ;
+
+
+//튜플 검색
+void ts_Select_tuple()
+{
+
+    EXEC SQL BEGIN DECLARE SECTION;
+    varchar v_tn[100];
+    varchar v_bn[100];
+    varchar v_pn[100];
+    varchar v_pc[100];
+    varchar v_pr[100];
+    varchar v_dn[100];
+    varchar v_sd[100];
+    varchar v_ed[100];
+    varchar v_tc[100];
+    varchar v_cn[100];
+
+    char dynstmt[1000];
+    char no_temp1[10];
+    EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+    clrscr();
+   system("cls");
+    print_screen("src_TransactionSelect.txt");
+
+    sprintf(dynstmt,"SELECT tnum, business_num, product_name, product_count, price, distributor_num, start_day, end_day, trans_count, trunc(end_day - start_day) FROM transaction") ;
+    EXEC SQL PREPARE S FROM :dynstmt ;
+
+    EXEC SQL DECLARE c_cursor CURSOR FOR S ; 
+
+    EXEC SQL OPEN c_cursor ; 
+
+    EXEC SQL WHENEVER NOT FOUND do break;
+    int i = 8;
+    for(;;)
+    {
+        EXEC SQL FETCH c_cursor INTO :v_tn, :v_bn, :v_pn, :v_pc, :v_pr, :v_dn, :v_sd, :v_ed, :v_tc, :v_cn;
+	    v_tn.arr[v_tn.len] = '\0';
+	    v_bn.arr[v_bn.len] = '\0';
+	    v_pn.arr[v_pn.len] = '\0';
+	    v_pc.arr[v_pc.len] = '\0';
+	    v_pr.arr[v_pr.len] = '\0';
+	    v_dn.arr[v_dn.len] = '\0';
+	    v_sd.arr[v_sd.len] = '\0';
+	    v_ed.arr[v_ed.len] = '\0';
+	    v_tc.arr[v_tc.len] = '\0';
+	    v_cn.arr[v_cn.len] = '\0';
+
+	    gotoxy(1, i);
+                printf("%s", v_bn.arr);
+
+                gotoxy(11,i);
+                printf("%s", v_pn.arr);
+
+                gotoxy(20,i);
+                printf("%s", v_pc.arr);
+
+                gotoxy(26,i);
+                printf("%s", v_pr.arr);
+
+                gotoxy(36,i);
+                printf("%s", v_dn.arr);
+
+                gotoxy(45,i);
+                printf("%s", v_sd.arr);
+
+                gotoxy(60,i);
+                printf("%s", v_tc.arr);
+
+                gotoxy(70,i);
+                printf("%s\n", v_cn.arr);
+                i++;
+    }
+
+    strcpy(tn, v_tn.arr);
+    strcpy(bn, v_bn.arr);
+    strcpy(pn, v_pn.arr);
+    strcpy(pc, v_pc.arr);
+    strcpy(pr, v_pr.arr);
+    strcpy(dn, v_dn.arr);
+    strcpy(sd, v_sd.arr);
+    strcpy(ed, v_ed.arr);
+    strcpy(tc, v_tc.arr);
+    strcpy(cn, v_cn.arr);
+
+    getch();
+    select_main();
+
+    EXEC SQL CLOSE c_cursor; 
+}
+
+/*----------------------------------------------------------------------------------*/

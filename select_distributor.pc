@@ -1,0 +1,82 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+//oracle
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+//win32 Visual C 2010 이상 컴파일 시 추가
+#define getch() _getch()
+
+//화면 커서 위치 제어
+#include < windows.h >
+void gotoxy(int x, int y) ;
+void getxy(int *x, int *y) ;
+void clrscr(void) ;
+
+void print_screen(char fname[]);
+void DB_connect();
+void sd_Select_tuple();
+
+void sql_error();
+
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR uid[80];
+	VARCHAR pwd[20];
+EXEC SQL END DECLARE SECTION;
+
+char dn[100], n[100], tl[100] ;
+
+//튜플 검색
+void sd_Select_tuple()
+{
+
+    EXEC SQL BEGIN DECLARE SECTION;
+    varchar  v_dn[100];
+    varchar v_n[100];
+    varchar v_tl[100];
+
+    char dynstmt[1000];
+    char no_temp1[10];
+    EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL WHENEVER SQLERROR DO sql_error("\7ORACLE ERROR:\n");
+
+    clrscr();
+   system("cls");
+    print_screen("src_DistributorSelect.txt");
+
+    sprintf(dynstmt,"SELECT distributor_num, name, trans_loc FROM distributor") ;
+    EXEC SQL PREPARE S FROM :dynstmt ;
+
+    EXEC SQL DECLARE c_cursor CURSOR FOR S ; 
+
+    EXEC SQL OPEN c_cursor ; 
+
+    EXEC SQL WHENEVER NOT FOUND do break;
+    for(;;)
+    {
+        EXEC SQL FETCH c_cursor INTO :v_dn, :v_n, :v_tl;
+	    v_dn.arr[v_dn.len] = '\0';
+	    v_n.arr[v_n.len] = '\0';
+	    v_tl.arr[v_tl.len] = '\0';
+
+	    printf("                      %s             %s           %s\n", v_dn.arr, v_n.arr, v_tl.arr);
+    }
+
+    strcpy(dn, v_dn.arr);
+    strcpy(n, v_n.arr);
+    strcpy(tl, v_tl.arr);
+
+    EXEC SQL CLOSE c_cursor;
+    getch();
+    select_main();
+}
+
+/*----------------------------------------------------------------------------------*/
